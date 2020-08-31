@@ -1,0 +1,50 @@
+{
+  "name": "@soundcut/audio-waveform-player-element",
+  "version": "1.0.0",
+  "description": "A lightweight audio waveform player web component.",
+  "unpkg": "dist/audio-waveform-player-element.umd.standalone.min.js",
+  "browser": "dist/audio-waveform-player-element.standalone.umd.js",
+  "module": "dist/audio-waveform-player-element.esm.js",
+  "main": "dist/audio-waveform-player-element.cjs.js",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "clean": "rm -rf dist",
+    "dev": "rollup -c -w",
+    "build": "npm run clean; rollup -c",
+    "build:production": "npm run clean; NODE_ENV=production rollup -c",
+    "test": "npm run build:production; cd test; npm t"
+  },
+  "author": {
+    "name": "Timothée 'Tim' Pillard",
+    "email": "tim@tpillard.fr",
+    "url": "https://twitter.com/tpillard"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/soundcut/audio-waveform-player-element.git"
+  },
+  "bugs": {
+    "url": "https://github.com/soundcut/audio-waveform-player-element/issues"
+  },
+  "keywords": [
+    "player",
+    "audio",
+    "waveform",
+    "custom-element",
+    "web-component"
+  ],
+  "license": "ISC",
+  "dependencies": {
+    "@soundcut/decode-audio-data-fast": "^2.0.1-beta",
+    "punycode": "^1.4.1",
+    "uhtml": "^2.1.1"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^15.0.0",
+    "@rollup/plugin-node-resolve": "^9.0.0",
+    "rollup": "^2.26.6",
+    "rollup-plugin-terser": "^7.0.1"
+  }
+}
