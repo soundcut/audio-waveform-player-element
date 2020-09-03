@@ -336,25 +336,8 @@ function getFileArrayBuffer(file) {
   });
 }
 
-// Use a promise wrapper on top of event based syntax
-// for browsers (Safari) which do not support promise-based syntax.
-function decodeAudioData(audioCtx, arrayBuffer) {
-  return new Promise(audioCtx.decodeAudioData.bind(audioCtx, arrayBuffer));
-}
-
 function getFileAudioBuffer(file, audioCtx, opts) {
-  const safari = !!window.webkitAudioContext;
-  const options = opts || {};
-
-  const slow = options.slow || safari;
-
-  if (slow) {
-    return getFileArrayBuffer(file).then((arrayBuffer) => {
-      return decodeAudioData(audioCtx, arrayBuffer);
-    });
-  }
-
-  return getFileAudioBuffer$1(file, audioCtx).catch((err) => {
+  return getFileAudioBuffer$1(file, audioCtx, opts).catch((err) => {
     // Unable to decode audio data fast.
     // Either because:
     // - the file is not MP3

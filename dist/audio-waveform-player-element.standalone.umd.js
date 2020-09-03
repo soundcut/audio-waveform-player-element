@@ -2610,9 +2610,19 @@
   async function getFileAudioBuffer(file, audioCtx, options = {}) {
     /* Copyright (c) 2019, Timothée 'Tim' Pillard, @ziir @tpillard - ISC */
 
-    const { concurrency = CONCURRENCY } = options;
+    const { native = false, concurrency = CONCURRENCY } = options;
 
     const arrayBuffer = await getArrayBuffer(file);
+
+    if (native) {
+      return decodeArrayBuffer(audioCtx, arrayBuffer);
+    }
+
+    const safari = !!window.webkitAudioContext;
+    if (safari) {
+      return getFileAudioBuffer(file, audioCtx, { native: true });
+    }
+
     const view = new DataView(arrayBuffer);
 
     const tags = main.readTags(view);
@@ -2690,25 +2700,8 @@
     });
   }
 
-  // Use a promise wrapper on top of event based syntax
-  // for browsers (Safari) which do not support promise-based syntax.
-  function decodeAudioData(audioCtx, arrayBuffer) {
-    return new Promise(audioCtx.decodeAudioData.bind(audioCtx, arrayBuffer));
-  }
-
   function getFileAudioBuffer$1(file, audioCtx, opts) {
-    const safari = !!window.webkitAudioContext;
-    const options = opts || {};
-
-    const slow = options.slow || safari;
-
-    if (slow) {
-      return getFileArrayBuffer(file).then((arrayBuffer) => {
-        return decodeAudioData(audioCtx, arrayBuffer);
-      });
-    }
-
-    return getFileAudioBuffer(file, audioCtx).catch((err) => {
+    return getFileAudioBuffer(file, audioCtx, opts).catch((err) => {
       // Unable to decode audio data fast.
       // Either because:
       // - the file is not MP3
