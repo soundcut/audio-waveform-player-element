@@ -447,12 +447,6 @@ class AudioWaveformPlayer extends HTMLElement {
     });
   }
 
-  doSnapshot(canvas) {
-    this.snapshots[canvas].push(
-      this.canvasContexts[canvas].getImageData(0, 0, this.width, HEIGHT)
-    );
-  }
-
   setupContainer() {
     this.container = this.shadowRoot.getElementById('root');
     this.boundingClientRect = this.container.getBoundingClientRect();
@@ -462,7 +456,6 @@ class AudioWaveformPlayer extends HTMLElement {
 
   setupCanvases() {
     this.canvasContexts = {};
-    this.snapshots = {};
     this.canvases = this.container.querySelector('#canvases');
     Array.from(this.canvases.children).forEach((node) => {
       const canvas = node.id.replace('-canvas', '');
@@ -470,7 +463,6 @@ class AudioWaveformPlayer extends HTMLElement {
       this.canvasContexts[canvas] = node.getContext('2d');
       this.canvasContexts[canvas].clearRect(0, 0, this.width, HEIGHT);
       this.canvasContexts[canvas].font = FONT;
-      this.snapshots[canvas] = [];
     });
   }
 

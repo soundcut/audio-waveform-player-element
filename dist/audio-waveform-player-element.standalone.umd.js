@@ -2603,18 +2603,8 @@
 
   // Use a promise wrapper on top of event based syntax
   // for browsers (Safari) which do not support promise-based syntax.
-  // function decodeArrayBuffer(audioCtx, arrayBuffer) {
-  //   return new Promise(audioCtx.decodeAudioData.bind(audioCtx, arrayBuffer));
-  // }
   function decodeArrayBuffer(audioCtx, arrayBuffer) {
-    return new Promise((resolve, reject) => {
-      audioCtx.decodeAudioData(
-        arrayBuffer,
-        (buffer) => console.debug(buffer) || resolve(buffer),
-        (err) => console.debug(err) || reject(err)
-      );
-    });
-    // return new Promise(audioCtx.decodeAudioData.bind(audioCtx, arrayBuffer));
+    return new Promise(audioCtx.decodeAudioData.bind(audioCtx, arrayBuffer));
   }
 
   async function getFileAudioBuffer(file, audioCtx, options = {}) {
@@ -2627,7 +2617,6 @@
 
     const tags = main.readTags(view);
     const firstFrame = tags.pop();
-    console.log(tags);
     const uInt8Array = new Uint8Array(arrayBuffer);
     const tagsUInt8Array = uInt8Array.subarray(0, firstFrame._section.offset);
     const chunkArrayBuffers = [];
@@ -3799,12 +3788,6 @@
       });
     }
 
-    doSnapshot(canvas) {
-      this.snapshots[canvas].push(
-        this.canvasContexts[canvas].getImageData(0, 0, this.width, HEIGHT)
-      );
-    }
-
     setupContainer() {
       this.container = this.shadowRoot.getElementById('root');
       this.boundingClientRect = this.container.getBoundingClientRect();
@@ -3814,7 +3797,6 @@
 
     setupCanvases() {
       this.canvasContexts = {};
-      this.snapshots = {};
       this.canvases = this.container.querySelector('#canvases');
       Array.from(this.canvases.children).forEach((node) => {
         const canvas = node.id.replace('-canvas', '');
@@ -3822,7 +3804,6 @@
         this.canvasContexts[canvas] = node.getContext('2d');
         this.canvasContexts[canvas].clearRect(0, 0, this.width, HEIGHT);
         this.canvasContexts[canvas].font = FONT;
-        this.snapshots[canvas] = [];
       });
     }
 
