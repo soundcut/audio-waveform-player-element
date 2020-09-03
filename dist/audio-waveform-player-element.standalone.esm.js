@@ -3372,18 +3372,72 @@ class AudioWaveformPlayer extends HTMLElement {
       // FIXME: Force pixelRatio=1 otherwise devices > 1 only draw half
       1  ;
     this.halfPixel = 0.5 / this.pixelRatio;
+
+    this.supportsPassiveEventListener = checkPassiveEventListener();
+    this.evtHandlerOptions = this.supportsPassiveEventListener
+      ? { passive: true }
+      : true;
+
+    if (!this.src) {
+      throw new Error(
+        '<waveform-player> must be given a valid `src` attribute.'
+      );
+    }
   }
 
   get src() {
     return this.getAttribute('src');
   }
 
+  attributeChangedCallback(name, prev, curr) {
+    if (name === 'src' && prev) {
+      this.disconnectedCallback();
+      this.connectedCallback();
+    }
+  }
+
+  disconnectedCallback() {
+    this.audio.removeEventListener(
+      'timeupdate',
+      this.handleSourceTimeUpdate,
+      this.evtHandlerOptions
+    );
+
+    this.container.removeEventListener(
+      'mousedown',
+      this.handleMouseDown,
+      this.evtHandlerOptions
+    );
+    this.container.removeEventListener(
+      'touchstart',
+      this.handleMouseDown,
+      this.evtHandlerOptions
+    );
+
+    this.container.removeEventListener(
+      'mousemove',
+      this.handleMouseMove,
+      this.evtHandlerOptions
+    );
+    this.container.removeEventListener(
+      'touchmove',
+      this.handleMouseMove,
+      this.evtHandlerOptions
+    );
+
+    this.audioBuffer = undefined;
+    this.file = undefined;
+    this.objectUrl = undefined;
+    this.audioCtx = undefined;
+    this.audio = undefined;
+  }
+
   async connectedCallback() {
-    this.supportsPassiveEventListener = checkPassiveEventListener();
-    this.evtHandlerOptions = this.supportsPassiveEventListener
-      ? { passive: true }
-      : true;
-    applyFocusVisiblePolyfill(this.shadowRoot);
+    if (!this.hasAttribute('data-js-focus-visible')) {
+      applyFocusVisiblePolyfill(this.shadowRoot);
+    }
+
+    this.audioKey = new String(this.src);
 
     this.render();
     this.setupContainer();
@@ -3392,21 +3446,12 @@ class AudioWaveformPlayer extends HTMLElement {
     this.objectURL = URL.createObjectURL(this.file);
 
     this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    getFileAudioBuffer$1(this.file, this.audioCtx).then((audioBuffer) => {
-      this.audioBuffer = audioBuffer;
-      this.onAudioDecoded();
-    });
+    this.audioBuffer = await getFileAudioBuffer$1(this.file, this.audioCtx);
+    this.onAudioDecoded();
   }
 
   audioRef(audio) {
     if (audio && audio !== this.audio) {
-      if (this.audio) {
-        this.audio.removeEventListener(
-          'timeupdate',
-          this.handleSourceTimeUpdate,
-          this.evtHandlerOptions
-        );
-      }
       this.audio = audio;
       this.audio.addEventListener(
         'timeupdate',
@@ -3990,11 +4035,17 @@ class AudioWaveformPlayer extends HTMLElement {
             ${!paused ? Pause() : Play()}
           </button>
         </div>
-        <audio ref=${this.audioRef}>
-          ${this.objectURL && this.file
-            ? html` <source src=${this.objectURL} type=${this.file.type} /> `
-            : ''}
-        </audio>
+        ${html.for(this.audioKey)`
+            <audio ref=${this.audioRef}>
+              ${
+                this.objectURL && this.file
+                  ? html`
+                      <source src=${this.objectURL} type=${this.file.type} />
+                    `
+                  : ''
+              }
+            </audio>
+          `}
       </div>
     `);
   }
