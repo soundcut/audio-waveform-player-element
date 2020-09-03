@@ -2712,6 +2712,33 @@
     });
   }
 
+  function humanizeDuration(duration, progress = null) {
+    const dHumanized = [
+      [Math.floor((duration % 3600) / 60), 'minute|s'],
+      [('00' + Math.floor(duration % 60)).slice(-2), 'second|s'],
+    ]
+      .reduce((acc, curr) => {
+        const parsed = Number.parseInt(curr);
+        if (parsed) {
+          acc.push(
+            [
+              curr[0],
+              parsed > 1 ? curr[1].replace('|', '') : curr[1].split('|')[0],
+            ].join(' ')
+          );
+        }
+        return acc;
+      }, [])
+      .join(', ');
+
+    if (Number.isNaN(Number.parseInt(progress))) {
+      return dHumanized;
+    }
+
+    const pHumanized = `${progress}%`;
+    return `${dHumanized} (${pHumanized})`;
+  }
+
   function withMediaSession(fn) {
     if ('mediaSession' in navigator) {
       fn();
@@ -3914,6 +3941,12 @@
         disabled || !this.audioBuffer
           ? 0
           : Math.round((this.audio.currentTime / this.getDuration()) * 100);
+      const humanProgress =
+        progress === 0
+          ? 'Beginning'
+          : progress === 100
+          ? 'End'
+          : humanizeDuration(this.audio.currentTime, progress);
 
       return this.renderer(html`
       <style>
@@ -4010,20 +4043,23 @@
               id="waveform-canvas"
               width="${this.width}"
               height="${HEIGHT}"
+              aria-hidden="true"
             />
             <canvas
               id="progress-canvas"
               width="${this.width}"
               height="${HEIGHT}"
               tabindex="0"
-              aria-valuetext="seek audio keyboard slider"
-              aria-valuemax="100"
-              aria-valuemin="0"
-              aria-valuenow=${progress}
               role="slider"
+              aria-label="Seek audio to a specific time"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow=${progress}
+              aria-valuetext=${humanProgress}
             />
             <canvas
               id="cursor-canvas"
+              aria-hidden="true"
               width="${this.containerWidth}"
               height="${HEIGHT}"
             />
@@ -4041,7 +4077,7 @@
           </button>
         </div>
         ${html.for(this.audioKey)`
-            <audio ref=${this.audioRef}>
+            <audio ref=${this.audioRef} tabindex="-1" style="display: none;">
               ${
                 this.objectURL && this.file
                   ? html`

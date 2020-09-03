@@ -3,6 +3,7 @@ import { html, render } from 'uhtml';
 import { checkPassiveEventListener } from './helpers/checkPassiveEventListener';
 import { applyFocusVisiblePolyfill } from './helpers/focus-visible';
 import { getFileAudioBuffer } from './helpers/getFileAudioBuffer';
+import { humanizeDuration } from './helpers/humanizeDuration';
 import { withMediaSession } from './helpers/withMediaSession';
 import { getDisplayName } from './helpers/getDisplayName';
 import { fetchSource } from './helpers/fetchSource';
@@ -580,6 +581,12 @@ class AudioWaveformPlayer extends HTMLElement {
       disabled || !this.audioBuffer
         ? 0
         : Math.round((this.audio.currentTime / this.getDuration()) * 100);
+    const humanProgress =
+      progress === 0
+        ? 'Beginning'
+        : progress === 100
+        ? 'End'
+        : humanizeDuration(this.audio.currentTime, progress);
 
     return this.renderer(html`
       <style>
@@ -676,20 +683,23 @@ class AudioWaveformPlayer extends HTMLElement {
               id="waveform-canvas"
               width="${this.width}"
               height="${HEIGHT}"
+              aria-hidden="true"
             />
             <canvas
               id="progress-canvas"
               width="${this.width}"
               height="${HEIGHT}"
               tabindex="0"
-              aria-valuetext="seek audio keyboard slider"
-              aria-valuemax="100"
-              aria-valuemin="0"
-              aria-valuenow=${progress}
               role="slider"
+              aria-label="Seek audio to a specific time"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow=${progress}
+              aria-valuetext=${humanProgress}
             />
             <canvas
               id="cursor-canvas"
+              aria-hidden="true"
               width="${this.containerWidth}"
               height="${HEIGHT}"
             />
@@ -707,7 +717,7 @@ class AudioWaveformPlayer extends HTMLElement {
           </button>
         </div>
         ${html.for(this.audioKey)`
-            <audio ref=${this.audioRef}>
+            <audio ref=${this.audioRef} tabindex="-1" style="display: none;">
               ${
                 this.objectURL && this.file
                   ? html`
