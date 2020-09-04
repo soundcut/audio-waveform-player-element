@@ -463,6 +463,25 @@ function Play() {
   `;
 }
 
+function Cross() {
+  return svg`
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="48"
+      height="48"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#f4ffdc"
+      stroke-width="2"
+      stroke-linecap="square"
+      stroke-linejoin="arcs"
+    >
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  `;
+}
+
 function Pause(id = 'default') {
   return svg`
     <svg
@@ -518,12 +537,6 @@ class AudioWaveformPlayer extends HTMLElement {
     this.evtHandlerOptions = this.supportsPassiveEventListener
       ? { passive: true }
       : true;
-
-    if (!this.src) {
-      throw new Error(
-        '<waveform-player> must be given a valid `src` attribute.'
-      );
-    }
   }
 
   get src() {
@@ -571,6 +584,7 @@ class AudioWaveformPlayer extends HTMLElement {
     this.objectUrl = undefined;
     this.audioCtx = undefined;
     this.audio = undefined;
+    this.error = undefined;
   }
 
   async connectedCallback() {
@@ -583,11 +597,25 @@ class AudioWaveformPlayer extends HTMLElement {
     this.render();
     this.setupContainer();
 
-    this.file = await fetchSource(this.src);
-    this.objectURL = URL.createObjectURL(this.file);
+    try {
+      if (!this.src) {
+        throw new Error(
+          '<waveform-player> must be given a valid `src` attribute.'
+        );
+      }
+      this.file = await fetchSource(this.src);
+      this.objectURL = URL.createObjectURL(this.file);
 
-    this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    this.audioBuffer = await getFileAudioBuffer(this.file, this.audioCtx);
+      this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      this.audioBuffer = await getFileAudioBuffer(this.file, this.audioCtx);
+    } catch (err) {
+      console.error(err);
+      this.disconnectedCallback();
+      this.error = err;
+      this.render();
+      return;
+    }
+
     this.onAudioDecoded();
   }
 
@@ -599,6 +627,7 @@ class AudioWaveformPlayer extends HTMLElement {
         this.handleSourceTimeUpdate,
         this.evtHandlerOptions
       );
+      this.render();
     }
   }
 
@@ -1002,6 +1031,7 @@ class AudioWaveformPlayer extends HTMLElement {
       //   this.audio = new Audio(this.src);
       //   return this.play();
       // }
+      this.error = err;
     }
     this.render();
   }
@@ -1076,6 +1106,20 @@ class AudioWaveformPlayer extends HTMLElement {
           overflow-x: auto;
         }
 
+        p {
+          padding: ${SPACING}px;
+          font-family: system-ui, sans-serif;
+          font-size: 1.5rem;
+        }
+
+        .error {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          background-color: #cc0000;
+          color: #f4ffdc;
+        }
+
         #canvases {
           position: relative;
           height: 100%;
@@ -1145,6 +1189,15 @@ class AudioWaveformPlayer extends HTMLElement {
       `}
       </style>
       <div id="root" aria-label="Audio Player" role="region">
+        ${this.error &&
+        html`<p class="error">
+          <span>
+            <strong>Unable to retrieve or play audio file.</strong>
+            <br />
+            ${`${this.error.name}: ${this.error.message}`}
+          </span>
+          ${Cross()}
+        </p>`}
         ${this.audioBuffer &&
         html`
           <div id="canvases" style="${`max-height:${CONTAINER_HEIGHT}px`}">
@@ -1174,28 +1227,29 @@ class AudioWaveformPlayer extends HTMLElement {
             />
           </div>
         `}
-        <div id="controls">
-          <button
-            id="play-pause"
-            disabled=${disabled}
-            onclick=${this.handlePlayPauseClick}
-            data-state=${!paused ? 'pause' : 'play'}
-            aria-label=${!paused ? 'Pause' : 'Play'}
-          >
-            ${!paused ? Pause() : Play()}
-          </button>
-        </div>
+        ${this.audio &&
+        html`
+          <div id="controls">
+            <button
+              id="play-pause"
+              disabled=${disabled}
+              onclick=${this.handlePlayPauseClick}
+              data-state=${!paused ? 'pause' : 'play'}
+              aria-label=${!paused ? 'Pause' : 'Play'}
+            >
+              ${!paused ? Pause() : Play()}
+            </button>
+          </div>
+        `}
         ${html.for(this.audioKey)`
-            <audio ref=${this.audioRef} tabindex="-1" style="display: none;">
-              ${
-                this.objectURL && this.file
-                  ? html`
-                      <source src=${this.objectURL} type=${this.file.type} />
-                    `
-                  : ''
-              }
-            </audio>
-          `}
+          <audio ref=${this.audioRef} tabindex="-1" style="display: none;">
+            ${
+              this.objectURL &&
+              this.file &&
+              html` <source src=${this.objectURL} type=${this.file.type} /> `
+            }
+          </audio>
+        `}
       </div>
     `);
   }
